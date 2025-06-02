@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DeviceGrid } from '@/components/DeviceGrid';
 import { ContentPanel } from '@/components/ContentPanel';
@@ -18,7 +17,8 @@ const mockDevices = [
     location: 'Downtown Store',
     ipAddress: '192.168.1.101',
     streamUrl: 'https://stream.radio.co/your-stream',
-    isScheduledContent: false
+    isScheduledContent: false,
+    storeMode: false
   },
   {
     id: 'rpi-002',
@@ -31,7 +31,8 @@ const mockDevices = [
     location: 'Mall Location',
     ipAddress: '192.168.1.102',
     streamUrl: 'https://stream.radio.co/your-stream',
-    isScheduledContent: false
+    isScheduledContent: false,
+    storeMode: false
   },
   {
     id: 'rpi-003',
@@ -44,7 +45,8 @@ const mockDevices = [
     location: 'Suburban Store',
     ipAddress: '192.168.1.103',
     streamUrl: 'https://stream.radio.co/your-stream',
-    isScheduledContent: false
+    isScheduledContent: false,
+    storeMode: false
   },
   {
     id: 'rpi-004',
@@ -57,7 +59,8 @@ const mockDevices = [
     location: 'Headquarters',
     ipAddress: '192.168.1.104',
     streamUrl: 'https://stream.radio.co/your-stream',
-    isScheduledContent: true
+    isScheduledContent: true,
+    storeMode: true
   }
 ];
 

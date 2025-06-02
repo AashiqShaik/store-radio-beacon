@@ -1,4 +1,3 @@
-
 import { Play, Pause, Volume2, Wifi, WifiOff, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +14,7 @@ interface Device {
   lastSeen: Date;
   location: string;
   ipAddress: string;
+  storeMode?: boolean;
 }
 
 interface DeviceCardProps {
@@ -89,6 +89,12 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate }: DeviceCar
             <div>{device.location}</div>
             <div>{device.ipAddress}</div>
             <div>Last seen: {formatLastSeen(device.lastSeen)}</div>
+            <div className="flex items-center space-x-1">
+              <span>Mode:</span>
+              <span className={device.storeMode ? 'text-blue-400' : 'text-green-400'}>
+                {device.storeMode ? 'Store Mode' : 'Live Stream'}
+              </span>
+            </div>
           </div>
 
           {device.currentTrack && (

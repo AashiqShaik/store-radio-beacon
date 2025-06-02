@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Play, Music, Clock, Settings, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ContentUpload } from './ContentUpload';
+import { MasterClock } from './MasterClock';
+import { StreamModeSelector } from './StreamModeSelector';
 
 interface Device {
   id: string;
@@ -20,6 +21,7 @@ interface Device {
   ipAddress: string;
   streamUrl?: string;
   isScheduledContent?: boolean;
+  storeMode?: boolean;
 }
 
 interface ContentPanelProps {
@@ -75,19 +77,29 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
 
   if (!selectedDevice) {
     return (
-      <Card className="bg-slate-800/80">
-        <CardContent className="p-6">
-          <div className="text-center text-slate-400">
-            <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Select a device to control content</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <MasterClock />
+        <Card className="bg-slate-800/80">
+          <CardContent className="p-6">
+            <div className="text-center text-slate-400">
+              <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Select a device to control content</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <MasterClock />
+      
+      <StreamModeSelector 
+        selectedDevice={selectedDevice}
+        onUpdateDevice={onUpdateDevice}
+      />
+
       <Card className="bg-slate-800/80">
         <CardHeader>
           <CardTitle className="text-white flex items-center space-x-2">
@@ -100,7 +112,7 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
             <div className="font-medium">{selectedDevice.name}</div>
             <div className="text-slate-400">{selectedDevice.location}</div>
             <div className="text-xs text-slate-500 mt-1">
-              Source: {selectedDevice.isScheduledContent ? 'Scheduled Content' : 'Live Stream'}
+              Mode: {selectedDevice.storeMode ? 'Store Mode (Live Stream + Scheduled)' : 'Live Stream Only'}
             </div>
           </div>
           
@@ -215,7 +227,8 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
             <div className="text-blue-400 font-medium">{selectedDevice.currentTrack}</div>
             <div className="text-xs text-slate-400 mt-1">
               {selectedDevice.isPlaying ? 'Playing' : 'Paused'} • 
-              {selectedDevice.isScheduledContent ? ' Scheduled Content' : ' Live Stream'}
+              {selectedDevice.storeMode ? ' Store Mode' : ' Live Stream Mode'}
+              {selectedDevice.isScheduledContent && ' • Scheduled Content Active'}
             </div>
           </CardContent>
         </Card>
