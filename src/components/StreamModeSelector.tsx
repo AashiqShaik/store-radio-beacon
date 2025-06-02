@@ -1,5 +1,5 @@
 
-import { Radio, Broadcast } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -54,7 +54,7 @@ export const StreamModeSelector = ({ selectedDevice, onUpdateDevice }: StreamMod
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Broadcast className="h-4 w-4 text-slate-400" />
+            <Radio className="h-4 w-4 text-slate-400" />
             <div>
               <Label className="text-slate-300">Store Mode</Label>
               <div className="text-xs text-slate-400">
