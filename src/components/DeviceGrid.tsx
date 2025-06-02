@@ -1,5 +1,6 @@
 
 import { DeviceCard } from './DeviceCard';
+import { ListView } from './ListView';
 
 interface Device {
   id: string;
@@ -18,9 +19,20 @@ interface DeviceGridProps {
   selectedDevice: string | null;
   onSelectDevice: (deviceId: string) => void;
   onUpdateDevice: (deviceId: string, updates: Partial<Device>) => void;
+  view: 'list' | 'detailed';
 }
 
-export const DeviceGrid = ({ devices, selectedDevice, onSelectDevice, onUpdateDevice }: DeviceGridProps) => {
+export const DeviceGrid = ({ devices, selectedDevice, onSelectDevice, onUpdateDevice, view }: DeviceGridProps) => {
+  if (view === 'list') {
+    return (
+      <ListView 
+        devices={devices}
+        selectedDevice={selectedDevice}
+        onSelectDevice={onSelectDevice}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-white mb-4">Connected Devices</h2>

@@ -1,15 +1,40 @@
 
 import { Radio, Scan, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ViewSwitcher } from './ViewSwitcher';
+import { AddDeviceDialog } from './AddDeviceDialog';
+
+interface Device {
+  id: string;
+  name: string;
+  status: 'online' | 'offline';
+  isPlaying: boolean;
+  volume: number;
+  currentTrack: string | null;
+  lastSeen: Date;
+  location: string;
+  ipAddress: string;
+}
 
 interface HeaderProps {
   onScan: () => void;
   isScanning: boolean;
   deviceCount: number;
   onlineCount: number;
+  view: 'list' | 'detailed';
+  onViewChange: (view: 'list' | 'detailed') => void;
+  onAddDevice: (device: Device) => void;
 }
 
-export const Header = ({ onScan, isScanning, deviceCount, onlineCount }: HeaderProps) => {
+export const Header = ({ 
+  onScan, 
+  isScanning, 
+  deviceCount, 
+  onlineCount, 
+  view, 
+  onViewChange, 
+  onAddDevice 
+}: HeaderProps) => {
   return (
     <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700">
       <div className="container mx-auto px-4 py-4">
@@ -37,14 +62,20 @@ export const Header = ({ onScan, isScanning, deviceCount, onlineCount }: HeaderP
             </div>
           </div>
           
-          <Button 
-            onClick={onScan}
-            disabled={isScanning}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Scan className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-            {isScanning ? 'Scanning...' : 'Scan Devices'}
-          </Button>
+          <div className="flex items-center space-x-4">
+            <ViewSwitcher view={view} onViewChange={onViewChange} />
+            
+            <AddDeviceDialog onAddDevice={onAddDevice} />
+            
+            <Button 
+              onClick={onScan}
+              disabled={isScanning}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Scan className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+              {isScanning ? 'Scanning...' : 'Scan Devices'}
+            </Button>
+          </div>
         </div>
       </div>
     </header>

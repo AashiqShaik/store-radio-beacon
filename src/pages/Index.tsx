@@ -57,6 +57,7 @@ const Index = () => {
   const [devices, setDevices] = useState(mockDevices);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [view, setView] = useState<'list' | 'detailed'>('detailed');
 
   // Simulate device scanning
   const scanForDevices = async () => {
@@ -74,6 +75,11 @@ const Index = () => {
         description: `Found ${devices.filter(d => d.status === 'online').length} online devices`,
       });
     }, 3000);
+  };
+
+  // Add new device
+  const addDevice = (newDevice: typeof mockDevices[0]) => {
+    setDevices(prev => [...prev, newDevice]);
   };
 
   // Update device status
@@ -100,6 +106,9 @@ const Index = () => {
         isScanning={isScanning}
         deviceCount={devices.length}
         onlineCount={devices.filter(d => d.status === 'online').length}
+        view={view}
+        onViewChange={setView}
+        onAddDevice={addDevice}
       />
       
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -110,6 +119,7 @@ const Index = () => {
               selectedDevice={selectedDevice}
               onSelectDevice={setSelectedDevice}
               onUpdateDevice={updateDevice}
+              view={view}
             />
           </div>
           
