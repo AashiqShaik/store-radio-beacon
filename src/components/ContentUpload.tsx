@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Upload, Calendar, Clock, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,12 +60,18 @@ export const ContentUpload = ({ deviceId, deviceName }: ContentUploadProps) => {
     }
   ]);
 
-  const [newSchedule, setNewSchedule] = useState({
+  const [newSchedule, setNewSchedule] = useState<{
+    contentId: string;
+    startTime: string;
+    endTime: string;
+    date: string;
+    repeat: 'none' | 'daily' | 'weekly';
+  }>({
     contentId: '',
     startTime: '',
     endTime: '',
     date: '',
-    repeat: 'none' as const
+    repeat: 'none'
   });
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
