@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Play, Music, Settings, Upload } from 'lucide-react';
+import { Play, Music, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -94,29 +95,9 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
         onUpdateDevice={onUpdateDevice}
       />
 
-      <Card className="bg-slate-800/80">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center space-x-2">
-            <Settings className="h-5 w-5" />
-            <span>Device Control</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm text-slate-300">
-            <div className="font-medium">{selectedDevice.name}</div>
-            <div className="text-slate-400">{selectedDevice.location}</div>
-            <div className="text-xs text-slate-500 mt-1">
-              Mode: {selectedDevice.storeMode ? 'Store Mode (Live Stream + Scheduled)' : 'Live Stream Only'}
-            </div>
-          </div>
-          
-          {selectedDevice.status === 'offline' && (
-            <div className="bg-red-400/20 text-red-400 p-3 rounded-lg text-sm">
-              Device is offline. Cannot control content.
-            </div>
-          )}
-
-          {selectedDevice.status === 'online' && selectedDevice.isScheduledContent && (
+      {selectedDevice.status === 'online' && selectedDevice.isScheduledContent && (
+        <Card className="bg-slate-800/80">
+          <CardContent className="p-4">
             <div className="bg-blue-400/20 text-blue-400 p-3 rounded-lg text-sm">
               Currently playing scheduled content. 
               <Button 
@@ -127,9 +108,9 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
                 Return to stream
               </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedDevice.storeMode ? (
         <Tabs defaultValue="library" className="w-full">
@@ -224,22 +205,6 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
             <p className="text-slate-400 text-sm">
               Device is in Live Stream mode. Enable Store Mode to access content scheduling and upload features.
             </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {selectedDevice.currentTrack && (
-        <Card className="bg-slate-800/80">
-          <CardHeader>
-            <CardTitle className="text-white text-sm">Now Playing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-blue-400 font-medium">{selectedDevice.currentTrack}</div>
-            <div className="text-xs text-slate-400 mt-1">
-              {selectedDevice.isPlaying ? 'Playing' : 'Paused'} • 
-              {selectedDevice.storeMode ? ' Store Mode' : ' Live Stream Mode'}
-              {selectedDevice.isScheduledContent && ' • Scheduled Content Active'}
-            </div>
           </CardContent>
         </Card>
       )}
