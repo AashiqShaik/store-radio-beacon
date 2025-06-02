@@ -10,7 +10,7 @@ const mockDevices = [
   {
     id: 'rpi-001',
     name: 'Store 1 - Main Floor',
-    status: 'online',
+    status: 'online' as const,
     isPlaying: true,
     volume: 75,
     currentTrack: 'Summer Vibes Playlist',
@@ -21,7 +21,7 @@ const mockDevices = [
   {
     id: 'rpi-002',
     name: 'Store 2 - Customer Area',
-    status: 'online',
+    status: 'online' as const,
     isPlaying: false,
     volume: 60,
     currentTrack: 'Chill Background',
@@ -32,7 +32,7 @@ const mockDevices = [
   {
     id: 'rpi-003',
     name: 'Store 3 - Entrance',
-    status: 'offline',
+    status: 'offline' as const,
     isPlaying: false,
     volume: 0,
     currentTrack: null,
@@ -43,7 +43,7 @@ const mockDevices = [
   {
     id: 'rpi-004',
     name: 'Store 4 - Back Office',
-    status: 'online',
+    status: 'online' as const,
     isPlaying: true,
     volume: 45,
     currentTrack: 'Corporate Ambient',
