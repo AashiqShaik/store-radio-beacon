@@ -13,10 +13,12 @@ const mockDevices = [
     status: 'online' as const,
     isPlaying: true,
     volume: 75,
-    currentTrack: 'Summer Vibes Playlist',
+    currentTrack: 'Live Stream',
     lastSeen: new Date(),
     location: 'Downtown Store',
-    ipAddress: '192.168.1.101'
+    ipAddress: '192.168.1.101',
+    streamUrl: 'https://stream.radio.co/your-stream',
+    isScheduledContent: false
   },
   {
     id: 'rpi-002',
@@ -24,10 +26,12 @@ const mockDevices = [
     status: 'online' as const,
     isPlaying: false,
     volume: 60,
-    currentTrack: 'Chill Background',
+    currentTrack: 'Live Stream',
     lastSeen: new Date(),
     location: 'Mall Location',
-    ipAddress: '192.168.1.102'
+    ipAddress: '192.168.1.102',
+    streamUrl: 'https://stream.radio.co/your-stream',
+    isScheduledContent: false
   },
   {
     id: 'rpi-003',
@@ -38,7 +42,9 @@ const mockDevices = [
     currentTrack: null,
     lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
     location: 'Suburban Store',
-    ipAddress: '192.168.1.103'
+    ipAddress: '192.168.1.103',
+    streamUrl: 'https://stream.radio.co/your-stream',
+    isScheduledContent: false
   },
   {
     id: 'rpi-004',
@@ -46,10 +52,12 @@ const mockDevices = [
     status: 'online' as const,
     isPlaying: true,
     volume: 45,
-    currentTrack: 'Corporate Ambient',
+    currentTrack: 'Store Announcement.mp3',
     lastSeen: new Date(),
     location: 'Headquarters',
-    ipAddress: '192.168.1.104'
+    ipAddress: '192.168.1.104',
+    streamUrl: 'https://stream.radio.co/your-stream',
+    isScheduledContent: true
   }
 ];
 
