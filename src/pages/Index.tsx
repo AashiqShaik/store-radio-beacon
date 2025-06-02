@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DeviceGrid } from '@/components/DeviceGrid';
 import { ContentPanel } from '@/components/ContentPanel';
@@ -19,7 +20,7 @@ const mockDevices = [
     lastSeen: new Date(),
     location: 'Downtown Store',
     ipAddress: '192.168.1.101',
-    streamUrl: 'https://stream.radio.co/your-stream',
+    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
     isScheduledContent: false,
     storeMode: false
   },
@@ -33,7 +34,7 @@ const mockDevices = [
     lastSeen: new Date(),
     location: 'Mall Location',
     ipAddress: '192.168.1.102',
-    streamUrl: 'https://stream.radio.co/your-stream',
+    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
     isScheduledContent: false,
     storeMode: false
   },
@@ -47,7 +48,7 @@ const mockDevices = [
     lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
     location: 'Suburban Store',
     ipAddress: '192.168.1.103',
-    streamUrl: 'https://stream.radio.co/your-stream',
+    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
     isScheduledContent: false,
     storeMode: false
   },
@@ -61,7 +62,7 @@ const mockDevices = [
     lastSeen: new Date(),
     location: 'Headquarters',
     ipAddress: '192.168.1.104',
-    streamUrl: 'https://stream.radio.co/your-stream',
+    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
     isScheduledContent: true,
     storeMode: true
   }
@@ -102,6 +103,25 @@ const Index = () => {
     setDevices(prev => prev.map(device => 
       device.id === deviceId ? { ...device, ...updates, lastSeen: new Date() } : device
     ));
+  };
+
+  // Handle device selection with auto-play
+  const handleSelectDevice = (deviceId: string) => {
+    setSelectedDevice(deviceId);
+    const device = devices.find(d => d.id === deviceId);
+    
+    if (device && device.status === 'online') {
+      // Auto-play the live stream when selecting an online device
+      updateDevice(deviceId, {
+        isPlaying: true,
+        currentTrack: 'Live Stream'
+      });
+      
+      toast({
+        title: "Device selected",
+        description: `${device.name} is now playing the live stream`,
+      });
+    }
   };
 
   // Auto-refresh device status every 30 seconds
@@ -145,7 +165,7 @@ const Index = () => {
               <DeviceGrid 
                 devices={filteredDevices}
                 selectedDevice={selectedDevice}
-                onSelectDevice={setSelectedDevice}
+                onSelectDevice={handleSelectDevice}
                 onUpdateDevice={updateDevice}
                 view={view}
               />
@@ -168,7 +188,7 @@ const Index = () => {
               <DeviceGrid 
                 devices={filteredDevices}
                 selectedDevice={selectedDevice}
-                onSelectDevice={setSelectedDevice}
+                onSelectDevice={handleSelectDevice}
                 onUpdateDevice={updateDevice}
                 view={view}
               />
