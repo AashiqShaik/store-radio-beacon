@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DeviceGrid } from '@/components/DeviceGrid';
 import { ContentPanel } from '@/components/ContentPanel';
+import { DeviceDetailsPanel } from '@/components/DeviceDetailsPanel';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 
@@ -110,6 +111,8 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const selectedDeviceData = selectedDevice ? devices.find(d => d.id === selectedDevice) : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Header 
@@ -122,25 +125,52 @@ const Index = () => {
         onAddDevice={addDevice}
       />
       
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <DeviceGrid 
-              devices={devices}
-              selectedDevice={selectedDevice}
-              onSelectDevice={setSelectedDevice}
-              onUpdateDevice={updateDevice}
-              view={view}
-            />
+      <div className="container mx-auto px-4 py-6">
+        {selectedDeviceData ? (
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            {/* Device Grid - Takes 2 columns on XL screens */}
+            <div className="xl:col-span-2">
+              <DeviceGrid 
+                devices={devices}
+                selectedDevice={selectedDevice}
+                onSelectDevice={setSelectedDevice}
+                onUpdateDevice={updateDevice}
+                view={view}
+              />
+            </div>
+            
+            {/* Right Panel - Takes 2 columns on XL screens */}
+            <div className="xl:col-span-2 space-y-6">
+              {/* Device Details */}
+              <DeviceDetailsPanel device={selectedDeviceData} />
+              
+              {/* Content Control Panel */}
+              <ContentPanel 
+                selectedDevice={selectedDeviceData}
+                onUpdateDevice={updateDevice}
+              />
+            </div>
           </div>
-          
-          <div className="lg:col-span-1">
-            <ContentPanel 
-              selectedDevice={selectedDevice ? devices.find(d => d.id === selectedDevice) : null}
-              onUpdateDevice={updateDevice}
-            />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <DeviceGrid 
+                devices={devices}
+                selectedDevice={selectedDevice}
+                onSelectDevice={setSelectedDevice}
+                onUpdateDevice={updateDevice}
+                view={view}
+              />
+            </div>
+            
+            <div className="lg:col-span-1">
+              <ContentPanel 
+                selectedDevice={null}
+                onUpdateDevice={updateDevice}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
