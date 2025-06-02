@@ -1,11 +1,125 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState, useEffect } from 'react';
+import { DeviceGrid } from '@/components/DeviceGrid';
+import { ContentPanel } from '@/components/ContentPanel';
+import { Header } from '@/components/Header';
+import { toast } from '@/hooks/use-toast';
+
+// Mock data for Raspberry Pi devices
+const mockDevices = [
+  {
+    id: 'rpi-001',
+    name: 'Store 1 - Main Floor',
+    status: 'online',
+    isPlaying: true,
+    volume: 75,
+    currentTrack: 'Summer Vibes Playlist',
+    lastSeen: new Date(),
+    location: 'Downtown Store',
+    ipAddress: '192.168.1.101'
+  },
+  {
+    id: 'rpi-002',
+    name: 'Store 2 - Customer Area',
+    status: 'online',
+    isPlaying: false,
+    volume: 60,
+    currentTrack: 'Chill Background',
+    lastSeen: new Date(),
+    location: 'Mall Location',
+    ipAddress: '192.168.1.102'
+  },
+  {
+    id: 'rpi-003',
+    name: 'Store 3 - Entrance',
+    status: 'offline',
+    isPlaying: false,
+    volume: 0,
+    currentTrack: null,
+    lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
+    location: 'Suburban Store',
+    ipAddress: '192.168.1.103'
+  },
+  {
+    id: 'rpi-004',
+    name: 'Store 4 - Back Office',
+    status: 'online',
+    isPlaying: true,
+    volume: 45,
+    currentTrack: 'Corporate Ambient',
+    lastSeen: new Date(),
+    location: 'Headquarters',
+    ipAddress: '192.168.1.104'
+  }
+];
 
 const Index = () => {
+  const [devices, setDevices] = useState(mockDevices);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  // Simulate device scanning
+  const scanForDevices = async () => {
+    setIsScanning(true);
+    toast({
+      title: "Scanning for devices...",
+      description: "Looking for Raspberry Pi devices on the network",
+    });
+    
+    // Simulate network scan
+    setTimeout(() => {
+      setIsScanning(false);
+      toast({
+        title: "Scan complete",
+        description: `Found ${devices.filter(d => d.status === 'online').length} online devices`,
+      });
+    }, 3000);
+  };
+
+  // Update device status
+  const updateDevice = (deviceId: string, updates: Partial<typeof mockDevices[0]>) => {
+    setDevices(prev => prev.map(device => 
+      device.id === deviceId ? { ...device, ...updates, lastSeen: new Date() } : device
+    ));
+  };
+
+  // Auto-refresh device status every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // In a real app, this would fetch from your API
+      console.log('Refreshing device status...');
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <Header 
+        onScan={scanForDevices} 
+        isScanning={isScanning}
+        deviceCount={devices.length}
+        onlineCount={devices.filter(d => d.status === 'online').length}
+      />
+      
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <DeviceGrid 
+              devices={devices}
+              selectedDevice={selectedDevice}
+              onSelectDevice={setSelectedDevice}
+              onUpdateDevice={updateDevice}
+            />
+          </div>
+          
+          <div className="lg:col-span-1">
+            <ContentPanel 
+              selectedDevice={selectedDevice ? devices.find(d => d.id === selectedDevice) : null}
+              onUpdateDevice={updateDevice}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
