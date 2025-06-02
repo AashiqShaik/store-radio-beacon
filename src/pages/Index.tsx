@@ -3,6 +3,8 @@ import { DeviceGrid } from '@/components/DeviceGrid';
 import { ContentPanel } from '@/components/ContentPanel';
 import { DeviceDetailsPanel } from '@/components/DeviceDetailsPanel';
 import { Header } from '@/components/Header';
+import { MasterClock } from '@/components/MasterClock';
+import { DeviceSearch } from '@/components/DeviceSearch';
 import { toast } from '@/hooks/use-toast';
 
 // Mock data for Raspberry Pi devices
@@ -70,6 +72,7 @@ const Index = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [view, setView] = useState<'list' | 'detailed'>('detailed');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Simulate device scanning
   const scanForDevices = async () => {
@@ -113,6 +116,13 @@ const Index = () => {
 
   const selectedDeviceData = selectedDevice ? devices.find(d => d.id === selectedDevice) : null;
 
+  // Filter devices based on search query
+  const filteredDevices = devices.filter(device =>
+    device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    device.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    device.ipAddress.includes(searchQuery)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Header 
@@ -128,10 +138,12 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6">
         {selectedDeviceData ? (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-            {/* Device Grid - Takes 2 columns on XL screens */}
-            <div className="xl:col-span-2">
+            {/* Left Panel - Device List with Clock and Search */}
+            <div className="xl:col-span-2 space-y-4">
+              <MasterClock />
+              <DeviceSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
               <DeviceGrid 
-                devices={devices}
+                devices={filteredDevices}
                 selectedDevice={selectedDevice}
                 onSelectDevice={setSelectedDevice}
                 onUpdateDevice={updateDevice}
@@ -139,12 +151,9 @@ const Index = () => {
               />
             </div>
             
-            {/* Right Panel - Takes 2 columns on XL screens */}
+            {/* Right Panel - Device Details and Content Control */}
             <div className="xl:col-span-2 space-y-6">
-              {/* Device Details */}
               <DeviceDetailsPanel device={selectedDeviceData} />
-              
-              {/* Content Control Panel */}
               <ContentPanel 
                 selectedDevice={selectedDeviceData}
                 onUpdateDevice={updateDevice}
@@ -153,9 +162,11 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-4">
+              <MasterClock />
+              <DeviceSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
               <DeviceGrid 
-                devices={devices}
+                devices={filteredDevices}
                 selectedDevice={selectedDevice}
                 onSelectDevice={setSelectedDevice}
                 onUpdateDevice={updateDevice}

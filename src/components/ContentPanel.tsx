@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Play, Music, Clock, Settings, Upload } from 'lucide-react';
+import { Play, Music, Settings, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ContentUpload } from './ContentUpload';
-import { MasterClock } from './MasterClock';
 import { StreamModeSelector } from './StreamModeSelector';
 
 interface Device {
@@ -77,24 +76,19 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
 
   if (!selectedDevice) {
     return (
-      <div className="space-y-4">
-        <MasterClock />
-        <Card className="bg-slate-800/80">
-          <CardContent className="p-6">
-            <div className="text-center text-slate-400">
-              <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Select a device to control content</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="bg-slate-800/80">
+        <CardContent className="p-6">
+          <div className="text-center text-slate-400">
+            <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Select a device to control content</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <MasterClock />
-      
       <StreamModeSelector 
         selectedDevice={selectedDevice}
         onUpdateDevice={onUpdateDevice}
@@ -137,86 +131,102 @@ export const ContentPanel = ({ selectedDevice, onUpdateDevice }: ContentPanelPro
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="library" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
-          <TabsTrigger value="library" className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-slate-700">
-            Content Library
-          </TabsTrigger>
-          <TabsTrigger value="upload" className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-slate-700">
-            Upload & Schedule
-          </TabsTrigger>
-        </TabsList>
+      {selectedDevice.storeMode ? (
+        <Tabs defaultValue="library" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
+            <TabsTrigger value="library" className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-slate-700">
+              Content Library
+            </TabsTrigger>
+            <TabsTrigger value="upload" className="text-slate-300 data-[state=active]:text-white data-[state=active]:bg-slate-700">
+              Upload & Schedule
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="library">
-          <Card className="bg-slate-800/80">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Music className="h-5 w-5" />
-                <span>Stream Content</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">
-                  Select Playlist
-                </label>
-                <Select 
-                  value={selectedPlaylist} 
-                  onValueChange={handlePlaylistChange}
-                  disabled={selectedDevice.status === 'offline'}
-                >
-                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                    <SelectValue placeholder="Choose a playlist" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    {playlists.map((playlist) => (
-                      <SelectItem 
-                        key={playlist.id} 
-                        value={playlist.id}
-                        className="text-white hover:bg-slate-600"
-                      >
-                        <div>
-                          <div className="font-medium">{playlist.name}</div>
-                          <div className="text-xs text-slate-400">
-                            {playlist.tracks} tracks • {playlist.duration}
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={selectedDevice.status === 'offline' || !selectedPlaylist}
-                onClick={() => handlePlaylistChange(selectedPlaylist)}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Play Selected Content
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="upload">
-          {selectedDevice.status === 'online' ? (
-            <ContentUpload 
-              deviceId={selectedDevice.id} 
-              deviceName={selectedDevice.name} 
-            />
-          ) : (
+          <TabsContent value="library">
             <Card className="bg-slate-800/80">
-              <CardContent className="p-6">
-                <div className="text-center text-slate-400">
-                  <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Device must be online to upload and schedule content</p>
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Music className="h-5 w-5" />
+                  <span>Stream Content</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">
+                    Select Playlist
+                  </label>
+                  <Select 
+                    value={selectedPlaylist} 
+                    onValueChange={handlePlaylistChange}
+                    disabled={selectedDevice.status === 'offline'}
+                  >
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                      <SelectValue placeholder="Choose a playlist" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      {playlists.map((playlist) => (
+                        <SelectItem 
+                          key={playlist.id} 
+                          value={playlist.id}
+                          className="text-white hover:bg-slate-600"
+                        >
+                          <div>
+                            <div className="font-medium">{playlist.name}</div>
+                            <div className="text-xs text-slate-400">
+                              {playlist.tracks} tracks • {playlist.duration}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={selectedDevice.status === 'offline' || !selectedPlaylist}
+                  onClick={() => handlePlaylistChange(selectedPlaylist)}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Play Selected Content
+                </Button>
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+
+          <TabsContent value="upload">
+            {selectedDevice.status === 'online' ? (
+              <ContentUpload 
+                deviceId={selectedDevice.id} 
+                deviceName={selectedDevice.name} 
+              />
+            ) : (
+              <Card className="bg-slate-800/80">
+                <CardContent className="p-6">
+                  <div className="text-center text-slate-400">
+                    <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Device must be online to upload and schedule content</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Card className="bg-slate-800/80">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center space-x-2">
+              <Music className="h-5 w-5" />
+              <span>Live Stream Mode</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-400 text-sm">
+              Device is in Live Stream mode. Enable Store Mode to access content scheduling and upload features.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedDevice.currentTrack && (
         <Card className="bg-slate-800/80">
