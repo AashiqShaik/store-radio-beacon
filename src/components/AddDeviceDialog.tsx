@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,12 +37,18 @@ interface AddDeviceDialogProps {
 export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [hostAddress, setHostAddress] = useState('');
+  const [tailscaleIP, setTailscaleIP] = useState('');
   const [deviceName, setDeviceName] = useState('');
 
-  // Updated connection testing using backend health check
+  // Validate Tailscale IP format (100.x.x.x range)
+  const isTailscaleIP = (ip: string): boolean => {
+    const tailscaleRegex = /^100\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    return tailscaleRegex.test(ip);
+  };
+
+  // Test connection using backend health check with Tailscale IP
   const testConnection = async (address: string): Promise<boolean> => {
-    console.log(`Testing connection to ${address} via backend...`);
+    console.log(`Testing Tailscale connection to ${address} via backend...`);
     
     try {
       const { supabase } = await import('@/integrations/supabase/client');
@@ -51,25 +58,34 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
       });
 
       if (error) {
-        console.error('Backend connection test error:', error);
+        console.error('Backend Tailscale connection test error:', error);
         return false;
       }
 
       const healthResult = data as { status: 'online' | 'offline'; hostname?: string };
-      console.log('Backend connection test result:', healthResult);
+      console.log('Backend Tailscale connection test result:', healthResult);
       
       return healthResult.status === 'online';
     } catch (error) {
-      console.error('Connection test failed:', error);
+      console.error('Tailscale connection test failed:', error);
       return false;
     }
   };
 
   const handleAddDevice = async () => {
-    if (!hostAddress.trim()) {
+    if (!tailscaleIP.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a hostname or IP address",
+        description: "Please enter a Tailscale IP address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isTailscaleIP(tailscaleIP)) {
+      toast({
+        title: "Invalid Tailscale IP",
+        description: "Please enter a valid Tailscale IP (100.x.x.x format)",
         variant: "destructive",
       });
       return;
@@ -78,23 +94,23 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
     setIsConnecting(true);
     
     toast({
-      title: "Testing connection...",
-      description: `Attempting to connect to ${hostAddress}`,
+      title: "Testing Tailscale connection...",
+      description: `Attempting to connect to ${tailscaleIP} via Tailscale network`,
     });
 
     try {
-      const isConnected = await testConnection(hostAddress);
+      const isConnected = await testConnection(tailscaleIP);
       
       const newDevice: Device = {
         id: `rpi-${Date.now()}`,
-        name: deviceName || `Raspberry Pi (${hostAddress})`,
+        name: deviceName || `Raspberry Pi (${tailscaleIP})`,
         status: isConnected ? 'online' : 'offline',
         isPlaying: false,
         volume: 50,
         currentTrack: null,
         lastSeen: new Date(),
-        location: 'Unknown Location',
-        ipAddress: hostAddress,
+        location: 'Remote via Tailscale',
+        ipAddress: tailscaleIP,
         streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
         isScheduledContent: false,
         storeMode: false
@@ -103,28 +119,28 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
       onAddDevice(newDevice);
       setIsConnecting(false);
       setIsOpen(false);
-      setHostAddress('');
+      setTailscaleIP('');
       setDeviceName('');
 
       if (isConnected) {
         toast({
           title: "Device added successfully",
-          description: `${newDevice.name} is online and ready to use`,
+          description: `${newDevice.name} is online and accessible via Tailscale`,
         });
       } else {
         toast({
-          title: "Device added (connection limited)",
-          description: `${newDevice.name} was added but appears to be offline or unreachable`,
+          title: "Device added (offline)",
+          description: `${newDevice.name} was added but appears to be offline or unreachable via Tailscale`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error adding device:', error);
+      console.error('Error adding Tailscale device:', error);
       setIsConnecting(false);
       
       toast({
         title: "Connection failed",
-        description: "Could not connect to the specified device. Please check the address and try again.",
+        description: "Could not connect to the device via Tailscale. Please check the IP and ensure the device is online.",
         variant: "destructive",
       });
     }
@@ -142,22 +158,40 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
         <DialogHeader>
           <DialogTitle className="text-white">Add New Raspberry Pi</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Enter the hostname or IP address of your Raspberry Pi. The app will test connectivity before adding the device.
+            Enter the Tailscale IP address of your Raspberry Pi. This enables secure remote access over the internet.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="hostname" className="text-white">
-              Hostname or IP Address *
+            <Label htmlFor="tailscale-ip" className="text-white flex items-center gap-2">
+              Tailscale IP Address *
+              <Info className="h-4 w-4 text-blue-400" />
             </Label>
             <Input
-              id="hostname"
-              placeholder="192.168.1.100 or raspberrypi.local"
-              value={hostAddress}
-              onChange={(e) => setHostAddress(e.target.value)}
-              className="bg-slate-700 border-slate-600 text-white"
+              id="tailscale-ip"
+              placeholder="100.64.0.1"
+              value={tailscaleIP}
+              onChange={(e) => setTailscaleIP(e.target.value)}
+              className={`bg-slate-700 border-slate-600 text-white ${
+                tailscaleIP && !isTailscaleIP(tailscaleIP) ? 'border-red-500' : ''
+              }`}
               disabled={isConnecting}
             />
+            <div className="text-xs text-slate-400 space-y-1">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                <span>Tailscale IPs start with 100.x.x.x</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                <span>Accessible globally via secure VPN</span>
+              </div>
+            </div>
+            {tailscaleIP && !isTailscaleIP(tailscaleIP) && (
+              <div className="text-xs text-red-400">
+                Please enter a valid Tailscale IP (100.x.x.x format)
+              </div>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="name" className="text-white">
@@ -177,10 +211,10 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
           <Button 
             type="submit" 
             onClick={handleAddDevice}
-            disabled={isConnecting}
+            disabled={isConnecting || !tailscaleIP || !isTailscaleIP(tailscaleIP)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isConnecting ? 'Testing Connection...' : 'Connect & Add Device'}
+            {isConnecting ? 'Testing Tailscale Connection...' : 'Connect via Tailscale'}
           </Button>
         </DialogFooter>
       </DialogContent>

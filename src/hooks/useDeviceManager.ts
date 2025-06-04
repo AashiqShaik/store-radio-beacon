@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Device } from '@/types/device';
@@ -15,7 +14,7 @@ export const useDeviceManager = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Enhanced device scanning that actually pings devices
+  // Enhanced device scanning for both local and Tailscale devices
   const scanForDevices = async () => {
     if (devices.length === 0) {
       toast({
@@ -26,20 +25,24 @@ export const useDeviceManager = () => {
     }
 
     setIsScanning(true);
-    console.log(`Starting scan for ${devices.length} devices...`);
+    const tailscaleCount = devices.filter(d => d.ipAddress.startsWith('100.')).length;
+    const localCount = devices.length - tailscaleCount;
+    
+    console.log(`Starting scan for ${devices.length} devices (${tailscaleCount} Tailscale, ${localCount} local)...`);
     
     toast({
       title: "Scanning devices...",
-      description: `Testing connectivity for ${devices.length} device(s)`,
+      description: `Testing connectivity for ${devices.length} device(s) via Tailscale and local networks`,
     });
     
     try {
       // Ping all devices concurrently with proper error handling
       const pingPromises = devices.map(async (device) => {
         try {
-          console.log(`Scanning device: ${device.name} (${device.ipAddress})`);
+          const connectionType = device.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
+          console.log(`Scanning device: ${device.name} (${device.ipAddress}) via ${connectionType}`);
           const isOnline = await pingDevice(device);
-          console.log(`Scan result for ${device.name}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+          console.log(`Scan result for ${device.name} via ${connectionType}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
           
           return {
             ...device,
@@ -79,7 +82,7 @@ export const useDeviceManager = () => {
     }
   };
 
-  // Ping a single device
+  // Ping a single device (works with both Tailscale and local IPs)
   const pingSingleDevice = async (deviceId: string) => {
     const device = findDeviceById(devices, deviceId);
     if (!device) {
@@ -87,16 +90,17 @@ export const useDeviceManager = () => {
       return;
     }
 
-    console.log(`Starting single ping for device: ${device.name} (${device.ipAddress})`);
+    const connectionType = device.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
+    console.log(`Starting single ping for device: ${device.name} (${device.ipAddress}) via ${connectionType}`);
 
     toast({
       title: "Pinging device...",
-      description: `Testing connectivity for ${device.name}`,
+      description: `Testing connectivity for ${device.name} via ${connectionType}`,
     });
 
     try {
       const isOnline = await pingDevice(device);
-      console.log(`Single ping result for ${device.name}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+      console.log(`Single ping result for ${device.name} via ${connectionType}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
       
       updateDevice(deviceId, {
         status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
@@ -105,14 +109,14 @@ export const useDeviceManager = () => {
 
       toast({
         title: isOnline ? "Device is online" : "Device is offline",
-        description: `${device.name} ${isOnline ? 'responded successfully' : 'did not respond'}`,
+        description: `${device.name} ${isOnline ? 'responded successfully' : 'did not respond'} via ${connectionType}`,
         variant: isOnline ? "default" : "destructive",
       });
     } catch (error) {
       console.error('Single ping error:', error);
       toast({
         title: "Ping failed",
-        description: `Could not ping ${device.name}`,
+        description: `Could not ping ${device.name} via ${connectionType}`,
         variant: "destructive",
       });
     }
@@ -120,11 +124,12 @@ export const useDeviceManager = () => {
 
   // Add new device
   const addDevice = (newDevice: Device) => {
-    console.log(`Adding new device: ${newDevice.name} (${newDevice.ipAddress})`);
+    const connectionType = newDevice.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
+    console.log(`Adding new device: ${newDevice.name} (${newDevice.ipAddress}) via ${connectionType}`);
     setDevices(prev => addDeviceToList(prev, newDevice));
     toast({
       title: "Device added",
-      description: `${newDevice.name} has been added to your device list`,
+      description: `${newDevice.name} has been added to your device list via ${connectionType}`,
     });
   };
 
@@ -133,7 +138,8 @@ export const useDeviceManager = () => {
     const device = findDeviceById(devices, deviceId);
     if (!device) return;
 
-    console.log(`Deleting device: ${device.name} (${device.ipAddress})`);
+    const connectionType = device.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
+    console.log(`Deleting device: ${device.name} (${device.ipAddress}) via ${connectionType}`);
     setDevices(prev => removeDeviceFromList(prev, deviceId));
     
     if (selectedDevice === deviceId) {
@@ -163,27 +169,29 @@ export const useDeviceManager = () => {
         currentTrack: 'Live Stream'
       });
       
+      const connectionType = device.ipAddress.startsWith('100.') ? 'via Tailscale' : 'on local network';
       toast({
         title: "Device selected",
-        description: `${device.name} is now playing the live stream`,
+        description: `${device.name} is now playing the live stream ${connectionType}`,
       });
     }
   };
 
-  // Auto-refresh device status every 30 seconds (but less aggressively)
+  // Auto-refresh device status every 60 seconds for both Tailscale and local devices
   useEffect(() => {
     const interval = setInterval(async () => {
       if (devices.length > 0) {
-        console.log('Auto-refreshing device status...');
+        console.log('Auto-refreshing device status for all devices...');
         
         // Auto-refresh one device at a time to reduce network load
         for (const device of devices) {
           try {
+            const connectionType = device.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
             const isOnline = await pingDevice(device);
             const newStatus = isOnline ? 'online' : 'offline';
             
             if (device.status !== newStatus) {
-              console.log(`Status change detected for ${device.name}: ${device.status} -> ${newStatus}`);
+              console.log(`Status change detected for ${device.name} via ${connectionType}: ${device.status} -> ${newStatus}`);
               updateDevice(device.id, {
                 status: newStatus as 'online' | 'offline',
                 lastSeen: isOnline ? new Date() : device.lastSeen,
@@ -197,7 +205,7 @@ export const useDeviceManager = () => {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
-    }, 60000); // Changed to 60 seconds to be less aggressive
+    }, 60000); // 60 seconds
 
     return () => clearInterval(interval);
   }, [devices]);

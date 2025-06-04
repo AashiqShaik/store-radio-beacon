@@ -1,5 +1,5 @@
 
-import { Play, Pause, Volume2, Wifi, WifiOff, Monitor, Trash2, RefreshCw } from 'lucide-react';
+import { Play, Pause, Volume2, Wifi, WifiOff, Monitor, Trash2, RefreshCw, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -28,6 +28,9 @@ interface DeviceCardProps {
 }
 
 export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, onPing }: DeviceCardProps) => {
+  // Check if this is a Tailscale IP
+  const isTailscaleIP = device.ipAddress.startsWith('100.');
+
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (device.status === 'offline') return;
@@ -79,6 +82,9 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, o
           <div className="flex items-center space-x-2">
             <Monitor className="h-5 w-5 text-slate-400" />
             <h3 className="font-medium text-white text-sm">{device.name}</h3>
+            {isTailscaleIP && (
+              <Shield className="h-4 w-4 text-blue-400" title="Secure Tailscale Connection" />
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -99,8 +105,18 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, o
 
         <div className="space-y-3">
           <div className="text-xs text-slate-400">
-            <div>{device.location}</div>
-            <div>{device.ipAddress}</div>
+            <div className="flex items-center gap-1">
+              <span>{device.location}</span>
+              {isTailscaleIP && (
+                <span className="text-blue-400 font-medium">(Tailscale)</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <span>{device.ipAddress}</span>
+              {isTailscaleIP && (
+                <span className="text-xs bg-blue-500/20 text-blue-400 px-1 rounded">VPN</span>
+              )}
+            </div>
             <div>Last seen: {formatLastSeen(device.lastSeen)}</div>
             <div className="flex items-center space-x-1">
               <span>Mode:</span>
@@ -156,7 +172,7 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, o
                 className="bg-orange-600 hover:bg-orange-700 border-orange-600 text-white"
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
-                Ping
+                {isTailscaleIP ? 'Ping via Tailscale' : 'Ping'}
               </Button>
             )}
             
