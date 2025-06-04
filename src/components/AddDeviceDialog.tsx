@@ -40,40 +40,68 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
   const [hostAddress, setHostAddress] = useState('');
   const [deviceName, setDeviceName] = useState('');
 
-  // Function to test connectivity to the Raspberry Pi
+  // Enhanced connection testing for Raspberry Pi
   const testConnection = async (address: string): Promise<boolean> => {
-    try {
-      // Try to ping the device using a simple HTTP request
-      // In a real implementation, you'd use a proper API endpoint on the Pi
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    console.log(`Testing connection to ${address}...`);
+    
+    // Try multiple common ports and methods for Raspberry Pi
+    const testMethods = [
+      // Try common web ports that might be open on Pi
+      { port: 80, protocol: 'http' },
+      { port: 8080, protocol: 'http' },
+      { port: 3000, protocol: 'http' },
+      { port: 5000, protocol: 'http' },
+      { port: 22, protocol: 'ssh' }, // SSH port
+    ];
 
-      const response = await fetch(`http://${address}:8080/ping`, {
-        method: 'GET',
-        signal: controller.signal,
-        mode: 'no-cors' // This allows the request even if CORS isn't set up
-      });
-
-      clearTimeout(timeoutId);
-      return true; // If we get here, the device responded
-    } catch (error) {
-      console.log(`Connection test to ${address} failed:`, error);
-      
-      // Try alternative connection methods
+    for (const method of testMethods) {
       try {
-        // Try SSH port (22)
-        const img = new Image();
-        img.src = `http://${address}:22`;
-        await new Promise((resolve, reject) => {
-          setTimeout(reject, 2000); // 2 second timeout for fallback
-          img.onload = resolve;
-          img.onerror = reject;
+        console.log(`Trying ${method.protocol} on port ${method.port}...`);
+        
+        // Create a test request with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(`http://${address}:${method.port}/`, {
+          method: 'HEAD', // Use HEAD to minimize data transfer
+          signal: controller.signal,
+          mode: 'no-cors', // Allow requests without CORS
         });
+
+        clearTimeout(timeoutId);
+        console.log(`Connection successful on port ${method.port}`);
         return true;
-      } catch {
-        // If all methods fail, still allow manual addition but warn user
-        return false;
+      } catch (error) {
+        console.log(`Port ${method.port} failed:`, error);
+        continue;
       }
+    }
+
+    // Try ping-like test using image loading (works for some devices)
+    try {
+      console.log('Trying image ping method...');
+      return await new Promise((resolve) => {
+        const img = new Image();
+        const timeout = setTimeout(() => {
+          img.src = '';
+          resolve(false);
+        }, 2000);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          resolve(true);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          resolve(false);
+        };
+        
+        img.src = `http://${address}/favicon.ico?${Date.now()}`;
+      });
+    } catch (error) {
+      console.log('Image ping failed:', error);
+      return false;
     }
   };
 
@@ -90,23 +118,22 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
     setIsConnecting(true);
     
     toast({
-      title: "Connecting to device...",
-      description: `Testing connection to ${hostAddress}`,
+      title: "Testing connection...",
+      description: `Attempting to connect to ${hostAddress}`,
     });
 
     try {
-      // Test connection to the device
       const isConnected = await testConnection(hostAddress);
       
       const newDevice: Device = {
         id: `rpi-${Date.now()}`,
-        name: deviceName || `Raspberry Pi at ${hostAddress}`,
+        name: deviceName || `Raspberry Pi (${hostAddress})`,
         status: isConnected ? 'online' : 'offline',
         isPlaying: false,
         volume: 50,
         currentTrack: null,
         lastSeen: new Date(),
-        location: 'New Store',
+        location: 'Unknown Location',
         ipAddress: hostAddress,
         streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
         isScheduledContent: false,
@@ -126,8 +153,8 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
         });
       } else {
         toast({
-          title: "Device added with limited connectivity",
-          description: `${newDevice.name} was added but may be offline or unreachable`,
+          title: "Device added (connection limited)",
+          description: `${newDevice.name} was added but appears to be offline or unreachable`,
           variant: "destructive",
         });
       }
@@ -193,7 +220,7 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
             disabled={isConnecting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isConnecting ? 'Connecting...' : 'Connect & Add Device'}
+            {isConnecting ? 'Testing Connection...' : 'Connect & Add Device'}
           </Button>
         </DialogFooter>
       </DialogContent>

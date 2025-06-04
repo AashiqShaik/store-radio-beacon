@@ -8,65 +8,8 @@ import { MasterClock } from '@/components/MasterClock';
 import { DeviceSearch } from '@/components/DeviceSearch';
 import { toast } from '@/hooks/use-toast';
 
-// Mock data for Raspberry Pi devices
-const mockDevices = [
-  {
-    id: 'rpi-001',
-    name: 'Store 1 - Main Floor',
-    status: 'online' as const,
-    isPlaying: true,
-    volume: 75,
-    currentTrack: 'Live Stream',
-    lastSeen: new Date(),
-    location: 'Downtown Store',
-    ipAddress: '192.168.1.101',
-    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
-    isScheduledContent: false,
-    storeMode: false
-  },
-  {
-    id: 'rpi-002',
-    name: 'Store 2 - Customer Area',
-    status: 'online' as const,
-    isPlaying: false,
-    volume: 60,
-    currentTrack: 'Live Stream',
-    lastSeen: new Date(),
-    location: 'Mall Location',
-    ipAddress: '192.168.1.102',
-    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
-    isScheduledContent: false,
-    storeMode: false
-  },
-  {
-    id: 'rpi-003',
-    name: 'Store 3 - Entrance',
-    status: 'offline' as const,
-    isPlaying: false,
-    volume: 0,
-    currentTrack: null,
-    lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
-    location: 'Suburban Store',
-    ipAddress: '192.168.1.103',
-    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
-    isScheduledContent: false,
-    storeMode: false
-  },
-  {
-    id: 'rpi-004',
-    name: 'Store 4 - Back Office',
-    status: 'online' as const,
-    isPlaying: true,
-    volume: 45,
-    currentTrack: 'Store Announcement.mp3',
-    lastSeen: new Date(),
-    location: 'Headquarters',
-    ipAddress: '192.168.1.104',
-    streamUrl: 'https://streamer.radio.co/s0066a9a04/listen',
-    isScheduledContent: true,
-    storeMode: true
-  }
-];
+// Start with empty device list - real devices will be added manually
+const mockDevices: any[] = [];
 
 const Index = () => {
   const [devices, setDevices] = useState(mockDevices);
@@ -75,27 +18,103 @@ const Index = () => {
   const [view, setView] = useState<'list' | 'detailed'>('detailed');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Simulate device scanning
+  // Function to ping a device and check its status
+  const pingDevice = async (device: any): Promise<boolean> => {
+    console.log(`Pinging device ${device.name} at ${device.ipAddress}...`);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      // Try multiple methods to check if device is reachable
+      const testMethods = [
+        { port: 80, protocol: 'http' },
+        { port: 8080, protocol: 'http' },
+        { port: 3000, protocol: 'http' },
+        { port: 22, protocol: 'ssh' },
+      ];
+
+      for (const method of testMethods) {
+        try {
+          await fetch(`http://${device.ipAddress}:${method.port}/`, {
+            method: 'HEAD',
+            signal: controller.signal,
+            mode: 'no-cors',
+          });
+          
+          clearTimeout(timeoutId);
+          console.log(`Device ${device.name} is online (port ${method.port})`);
+          return true;
+        } catch (error) {
+          continue;
+        }
+      }
+      
+      clearTimeout(timeoutId);
+      console.log(`Device ${device.name} appears offline`);
+      return false;
+    } catch (error) {
+      console.log(`Ping failed for ${device.name}:`, error);
+      return false;
+    }
+  };
+
+  // Enhanced device scanning that actually pings devices
   const scanForDevices = async () => {
+    if (devices.length === 0) {
+      toast({
+        title: "No devices to scan",
+        description: "Add some devices first using the 'Add Device' button",
+      });
+      return;
+    }
+
     setIsScanning(true);
     toast({
-      title: "Scanning for devices...",
-      description: "Looking for Raspberry Pi devices on the network",
+      title: "Scanning devices...",
+      description: `Testing connectivity for ${devices.length} device(s)`,
     });
     
-    // Simulate network scan
-    setTimeout(() => {
+    try {
+      // Ping all devices concurrently
+      const pingPromises = devices.map(async (device) => {
+        const isOnline = await pingDevice(device);
+        return {
+          ...device,
+          status: isOnline ? 'online' : 'offline',
+          lastSeen: isOnline ? new Date() : device.lastSeen,
+        };
+      });
+
+      const updatedDevices = await Promise.all(pingPromises);
+      setDevices(updatedDevices);
+
+      const onlineCount = updatedDevices.filter(d => d.status === 'online').length;
+      const offlineCount = updatedDevices.length - onlineCount;
+
       setIsScanning(false);
       toast({
         title: "Scan complete",
-        description: `Found ${devices.filter(d => d.status === 'online').length} online devices`,
+        description: `Found ${onlineCount} online and ${offlineCount} offline device(s)`,
       });
-    }, 3000);
+    } catch (error) {
+      console.error('Scan error:', error);
+      setIsScanning(false);
+      toast({
+        title: "Scan failed",
+        description: "Error occurred while scanning devices",
+        variant: "destructive",
+      });
+    }
   };
 
   // Add new device
   const addDevice = (newDevice: typeof mockDevices[0]) => {
     setDevices(prev => [...prev, newDevice]);
+    toast({
+      title: "Device added",
+      description: `${newDevice.name} has been added to your device list`,
+    });
   };
 
   // Update device status
@@ -127,12 +146,23 @@ const Index = () => {
   // Auto-refresh device status every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      // In a real app, this would fetch from your API
-      console.log('Refreshing device status...');
+      if (devices.length > 0) {
+        console.log('Auto-refreshing device status...');
+        // Silently update device status without showing scan toast
+        devices.forEach(async (device) => {
+          const isOnline = await pingDevice(device);
+          if (device.status !== (isOnline ? 'online' : 'offline')) {
+            updateDevice(device.id, {
+              status: isOnline ? 'online' : 'offline',
+              lastSeen: isOnline ? new Date() : device.lastSeen,
+            });
+          }
+        });
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [devices]);
 
   const selectedDeviceData = selectedDevice ? devices.find(d => d.id === selectedDevice) : null;
 
@@ -156,7 +186,14 @@ const Index = () => {
       />
       
       <div className="container mx-auto px-4 py-6">
-        {selectedDeviceData ? (
+        {devices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <h2 className="text-2xl font-bold text-white mb-4">No Devices Added</h2>
+            <p className="text-slate-400 mb-6">
+              Start by adding your Raspberry Pi devices using the "Add Device" button above.
+            </p>
+          </div>
+        ) : selectedDeviceData ? (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Left Panel - Device List with Clock and Search */}
             <div className="xl:col-span-2 space-y-4">
