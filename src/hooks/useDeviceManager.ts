@@ -1,61 +1,19 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-
-interface Device {
-  id: string;
-  name: string;
-  status: 'online' | 'offline';
-  isPlaying: boolean;
-  volume: number;
-  currentTrack: string | null;
-  lastSeen: Date;
-  location: string;
-  ipAddress: string;
-  streamUrl: string;
-  isScheduledContent: boolean;
-  storeMode: boolean;
-}
+import { Device } from '@/types/device';
+import { pingDevice } from '@/services/devicePing';
+import { 
+  updateDeviceInList, 
+  removeDeviceFromList, 
+  addDeviceToList, 
+  findDeviceById 
+} from '@/utils/deviceUtils';
 
 export const useDeviceManager = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-
-  // HTTP health check ping function
-  const pingDevice = async (device: Device): Promise<boolean> => {
-    console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health...`);
-    
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      const response = await fetch(`http://${device.ipAddress}:5000/health`, {
-        method: 'GET',
-        signal: controller.signal,
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        console.log(`Health check successful for ${device.name} - Status: ${response.status}`);
-        return true;
-      } else {
-        console.log(`Health check failed for ${device.name} - Status: ${response.status}`);
-        return false;
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log(`Health check timeout for ${device.name}`);
-      } else {
-        console.log(`Health check error for ${device.name}:`, error);
-      }
-      return false;
-    }
-  };
 
   // Enhanced device scanning that actually pings devices
   const scanForDevices = async () => {
@@ -123,7 +81,7 @@ export const useDeviceManager = () => {
 
   // Ping a single device
   const pingSingleDevice = async (deviceId: string) => {
-    const device = devices.find(d => d.id === deviceId);
+    const device = findDeviceById(devices, deviceId);
     if (!device) {
       console.error(`Device with ID ${deviceId} not found`);
       return;
@@ -163,7 +121,7 @@ export const useDeviceManager = () => {
   // Add new device
   const addDevice = (newDevice: Device) => {
     console.log(`Adding new device: ${newDevice.name} (${newDevice.ipAddress})`);
-    setDevices(prev => [...prev, newDevice]);
+    setDevices(prev => addDeviceToList(prev, newDevice));
     toast({
       title: "Device added",
       description: `${newDevice.name} has been added to your device list`,
@@ -172,11 +130,11 @@ export const useDeviceManager = () => {
 
   // Delete device
   const deleteDevice = (deviceId: string) => {
-    const device = devices.find(d => d.id === deviceId);
+    const device = findDeviceById(devices, deviceId);
     if (!device) return;
 
     console.log(`Deleting device: ${device.name} (${device.ipAddress})`);
-    setDevices(prev => prev.filter(d => d.id !== deviceId));
+    setDevices(prev => removeDeviceFromList(prev, deviceId));
     
     if (selectedDevice === deviceId) {
       setSelectedDevice(null);
@@ -190,15 +148,13 @@ export const useDeviceManager = () => {
 
   // Update device status
   const updateDevice = (deviceId: string, updates: Partial<Device>) => {
-    setDevices(prev => prev.map(device => 
-      device.id === deviceId ? { ...device, ...updates, lastSeen: new Date() } : device
-    ));
+    setDevices(prev => updateDeviceInList(prev, deviceId, updates));
   };
 
   // Handle device selection with auto-play
   const handleSelectDevice = (deviceId: string) => {
     setSelectedDevice(deviceId);
-    const device = devices.find(d => d.id === deviceId);
+    const device = findDeviceById(devices, deviceId);
     
     if (device && device.status === 'online') {
       // Auto-play the live stream when selecting an online device
