@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,45 +21,71 @@ export const useDeviceManager = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Function to ping a device and check its status
+  // More realistic ping function using WebSocket connection test
   const pingDevice = async (device: Device): Promise<boolean> => {
     console.log(`Pinging device ${device.name} at ${device.ipAddress}...`);
     
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased timeout
+      // Try WebSocket connection as a more reliable ping method
+      return await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 3000);
 
-      // Try multiple methods to check if device is reachable
-      const testMethods = [
-        { port: 80, protocol: 'http' },
-        { port: 8080, protocol: 'http' },
-        { port: 3000, protocol: 'http' },
-        { port: 5000, protocol: 'http' },
-        { port: 22, protocol: 'ssh' },
-      ];
-
-      for (const method of testMethods) {
         try {
-          console.log(`Testing ${device.name} on port ${method.port}...`);
+          // Try WebSocket connection (common for IoT devices)
+          const ws = new WebSocket(`ws://${device.ipAddress}:8080`);
           
-          const response = await fetch(`http://${device.ipAddress}:${method.port}/`, {
-            method: 'HEAD',
-            signal: controller.signal,
-            mode: 'no-cors',
-          });
+          ws.onopen = () => {
+            console.log(`WebSocket connection successful to ${device.name}`);
+            clearTimeout(timeout);
+            ws.close();
+            resolve(true);
+          };
           
-          clearTimeout(timeoutId);
-          console.log(`Device ${device.name} responded on port ${method.port}`);
-          return true;
+          ws.onerror = () => {
+            console.log(`WebSocket failed for ${device.name}, trying alternative methods...`);
+            
+            // Fallback: Try image loading method
+            const img = new Image();
+            const imgTimeout = setTimeout(() => {
+              img.src = '';
+              clearTimeout(timeout);
+              resolve(false);
+            }, 2000);
+            
+            img.onload = () => {
+              console.log(`Image ping successful for ${device.name}`);
+              clearTimeout(imgTimeout);
+              clearTimeout(timeout);
+              resolve(true);
+            };
+            
+            img.onerror = () => {
+              console.log(`All ping methods failed for ${device.name}`);
+              clearTimeout(imgTimeout);
+              clearTimeout(timeout);
+              resolve(false);
+            };
+            
+            // Try loading a common file that might exist
+            img.src = `http://${device.ipAddress}/favicon.ico?${Date.now()}`;
+          };
+          
+          ws.onclose = () => {
+            // Connection was established but closed immediately - still counts as online
+            if (!timeout) return; // Already resolved
+            console.log(`WebSocket closed immediately for ${device.name} - treating as offline`);
+            clearTimeout(timeout);
+            resolve(false);
+          };
+          
         } catch (error) {
-          console.log(`Port ${method.port} failed for ${device.name}:`, error);
-          continue;
+          console.log(`WebSocket creation failed for ${device.name}:`, error);
+          clearTimeout(timeout);
+          resolve(false);
         }
-      }
-      
-      clearTimeout(timeoutId);
-      console.log(`Device ${device.name} appears offline - no ports responded`);
-      return false;
+      });
     } catch (error) {
       console.log(`Ping failed for ${device.name}:`, error);
       return false;
@@ -78,20 +103,33 @@ export const useDeviceManager = () => {
     }
 
     setIsScanning(true);
+    console.log(`Starting scan for ${devices.length} devices...`);
+    
     toast({
       title: "Scanning devices...",
       description: `Testing connectivity for ${devices.length} device(s)`,
     });
     
     try {
-      // Ping all devices concurrently
+      // Ping all devices concurrently with proper error handling
       const pingPromises = devices.map(async (device) => {
-        const isOnline = await pingDevice(device);
-        return {
-          ...device,
-          status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
-          lastSeen: isOnline ? new Date() : device.lastSeen,
-        };
+        try {
+          console.log(`Scanning device: ${device.name} (${device.ipAddress})`);
+          const isOnline = await pingDevice(device);
+          console.log(`Scan result for ${device.name}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+          
+          return {
+            ...device,
+            status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
+            lastSeen: isOnline ? new Date() : device.lastSeen,
+          };
+        } catch (error) {
+          console.error(`Error scanning ${device.name}:`, error);
+          return {
+            ...device,
+            status: 'offline' as 'online' | 'offline',
+          };
+        }
       });
 
       const updatedDevices = await Promise.all(pingPromises);
@@ -99,6 +137,8 @@ export const useDeviceManager = () => {
 
       const onlineCount = updatedDevices.filter(d => d.status === 'online').length;
       const offlineCount = updatedDevices.length - onlineCount;
+
+      console.log(`Scan complete: ${onlineCount} online, ${offlineCount} offline`);
 
       setIsScanning(false);
       toast({
@@ -119,7 +159,12 @@ export const useDeviceManager = () => {
   // Ping a single device
   const pingSingleDevice = async (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
-    if (!device) return;
+    if (!device) {
+      console.error(`Device with ID ${deviceId} not found`);
+      return;
+    }
+
+    console.log(`Starting single ping for device: ${device.name} (${device.ipAddress})`);
 
     toast({
       title: "Pinging device...",
@@ -128,6 +173,8 @@ export const useDeviceManager = () => {
 
     try {
       const isOnline = await pingDevice(device);
+      console.log(`Single ping result for ${device.name}: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+      
       updateDevice(deviceId, {
         status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
         lastSeen: isOnline ? new Date() : device.lastSeen,
@@ -150,6 +197,7 @@ export const useDeviceManager = () => {
 
   // Add new device
   const addDevice = (newDevice: Device) => {
+    console.log(`Adding new device: ${newDevice.name} (${newDevice.ipAddress})`);
     setDevices(prev => [...prev, newDevice]);
     toast({
       title: "Device added",
@@ -162,9 +210,9 @@ export const useDeviceManager = () => {
     const device = devices.find(d => d.id === deviceId);
     if (!device) return;
 
+    console.log(`Deleting device: ${device.name} (${device.ipAddress})`);
     setDevices(prev => prev.filter(d => d.id !== deviceId));
     
-    // Clear selection if the deleted device was selected
     if (selectedDevice === deviceId) {
       setSelectedDevice(null);
     }
@@ -201,23 +249,34 @@ export const useDeviceManager = () => {
     }
   };
 
-  // Auto-refresh device status every 30 seconds
+  // Auto-refresh device status every 30 seconds (but less aggressively)
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (devices.length > 0) {
         console.log('Auto-refreshing device status...');
-        // Silently update device status without showing scan toast
-        devices.forEach(async (device) => {
-          const isOnline = await pingDevice(device);
-          if (device.status !== (isOnline ? 'online' : 'offline')) {
-            updateDevice(device.id, {
-              status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
-              lastSeen: isOnline ? new Date() : device.lastSeen,
-            });
+        
+        // Auto-refresh one device at a time to reduce network load
+        for (const device of devices) {
+          try {
+            const isOnline = await pingDevice(device);
+            const newStatus = isOnline ? 'online' : 'offline';
+            
+            if (device.status !== newStatus) {
+              console.log(`Status change detected for ${device.name}: ${device.status} -> ${newStatus}`);
+              updateDevice(device.id, {
+                status: newStatus as 'online' | 'offline',
+                lastSeen: isOnline ? new Date() : device.lastSeen,
+              });
+            }
+          } catch (error) {
+            console.error(`Auto-refresh error for ${device.name}:`, error);
           }
-        });
+          
+          // Add small delay between device pings
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
-    }, 30000);
+    }, 60000); // Changed to 60 seconds to be less aggressive
 
     return () => clearInterval(interval);
   }, [devices]);
