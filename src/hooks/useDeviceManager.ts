@@ -21,73 +21,38 @@ export const useDeviceManager = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // More realistic ping function using WebSocket connection test
+  // HTTP health check ping function
   const pingDevice = async (device: Device): Promise<boolean> => {
-    console.log(`Pinging device ${device.name} at ${device.ipAddress}...`);
+    console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health...`);
     
     try {
-      // Try WebSocket connection as a more reliable ping method
-      return await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve(false);
-        }, 3000);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        try {
-          // Try WebSocket connection (common for IoT devices)
-          const ws = new WebSocket(`ws://${device.ipAddress}:8080`);
-          
-          ws.onopen = () => {
-            console.log(`WebSocket connection successful to ${device.name}`);
-            clearTimeout(timeout);
-            ws.close();
-            resolve(true);
-          };
-          
-          ws.onerror = () => {
-            console.log(`WebSocket failed for ${device.name}, trying alternative methods...`);
-            
-            // Fallback: Try image loading method
-            const img = new Image();
-            const imgTimeout = setTimeout(() => {
-              img.src = '';
-              clearTimeout(timeout);
-              resolve(false);
-            }, 2000);
-            
-            img.onload = () => {
-              console.log(`Image ping successful for ${device.name}`);
-              clearTimeout(imgTimeout);
-              clearTimeout(timeout);
-              resolve(true);
-            };
-            
-            img.onerror = () => {
-              console.log(`All ping methods failed for ${device.name}`);
-              clearTimeout(imgTimeout);
-              clearTimeout(timeout);
-              resolve(false);
-            };
-            
-            // Try loading a common file that might exist
-            img.src = `http://${device.ipAddress}/favicon.ico?${Date.now()}`;
-          };
-          
-          ws.onclose = () => {
-            // Connection was established but closed immediately - still counts as online
-            if (!timeout) return; // Already resolved
-            console.log(`WebSocket closed immediately for ${device.name} - treating as offline`);
-            clearTimeout(timeout);
-            resolve(false);
-          };
-          
-        } catch (error) {
-          console.log(`WebSocket creation failed for ${device.name}:`, error);
-          clearTimeout(timeout);
-          resolve(false);
-        }
+      const response = await fetch(`http://${device.ipAddress}:5000/health`, {
+        method: 'GET',
+        signal: controller.signal,
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
       });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        console.log(`Health check successful for ${device.name} - Status: ${response.status}`);
+        return true;
+      } else {
+        console.log(`Health check failed for ${device.name} - Status: ${response.status}`);
+        return false;
+      }
     } catch (error) {
-      console.log(`Ping failed for ${device.name}:`, error);
+      if (error.name === 'AbortError') {
+        console.log(`Health check timeout for ${device.name}`);
+      } else {
+        console.log(`Health check error for ${device.name}:`, error);
+      }
       return false;
     }
   };
