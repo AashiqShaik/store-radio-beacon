@@ -1,6 +1,7 @@
 
-import { Wifi, WifiOff, Monitor } from 'lucide-react';
+import { Wifi, WifiOff, Monitor, Trash2, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface Device {
   id: string;
@@ -18,9 +19,27 @@ interface ListViewProps {
   devices: Device[];
   selectedDevice: string | null;
   onSelectDevice: (deviceId: string) => void;
+  onDeleteDevice: (deviceId: string) => void;
+  onPingDevice: (deviceId: string) => void;
 }
 
-export const ListView = ({ devices, selectedDevice, onSelectDevice }: ListViewProps) => {
+export const ListView = ({ 
+  devices, 
+  selectedDevice, 
+  onSelectDevice, 
+  onDeleteDevice, 
+  onPingDevice 
+}: ListViewProps) => {
+  const handleDelete = (deviceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteDevice(deviceId);
+  };
+
+  const handlePing = (deviceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPingDevice(deviceId);
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-white mb-4">Device List</h2>
@@ -64,6 +83,28 @@ export const ListView = ({ devices, selectedDevice, onSelectDevice }: ListViewPr
                     }`}>
                       {device.status}
                     </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    {device.status === 'offline' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handlePing(device.id, e)}
+                        className="bg-orange-600 hover:bg-orange-700 border-orange-600 text-white h-6 px-2"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    )}
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => handleDelete(device.id, e)}
+                      className="bg-red-600 hover:bg-red-700 border-red-600 text-white h-6 px-2"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </div>

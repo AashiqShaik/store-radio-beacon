@@ -27,6 +27,8 @@ interface DeviceLayoutProps {
   view: 'list' | 'detailed';
   onSelectDevice: (deviceId: string) => void;
   onUpdateDevice: (deviceId: string, updates: Partial<Device>) => void;
+  onDeleteDevice: (deviceId: string) => void;
+  onPingDevice: (deviceId: string) => void;
 }
 
 export const DeviceLayout = ({
@@ -35,6 +37,8 @@ export const DeviceLayout = ({
   view,
   onSelectDevice,
   onUpdateDevice,
+  onDeleteDevice,
+  onPingDevice,
 }: DeviceLayoutProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -59,6 +63,8 @@ export const DeviceLayout = ({
             selectedDevice={selectedDevice}
             onSelectDevice={onSelectDevice}
             onUpdateDevice={onUpdateDevice}
+            onDeleteDevice={onDeleteDevice}
+            onPingDevice={onPingDevice}
             view={view}
           />
         </div>
@@ -85,6 +91,8 @@ export const DeviceLayout = ({
           selectedDevice={selectedDevice}
           onSelectDevice={onSelectDevice}
           onUpdateDevice={onUpdateDevice}
+          onDeleteDevice={onDeleteDevice}
+          onPingDevice={onPingDevice}
           view={view}
         />
       </div>

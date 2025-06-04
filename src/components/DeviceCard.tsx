@@ -1,4 +1,5 @@
-import { Play, Pause, Volume2, Wifi, WifiOff, Monitor } from 'lucide-react';
+
+import { Play, Pause, Volume2, Wifi, WifiOff, Monitor, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -22,9 +23,11 @@ interface DeviceCardProps {
   isSelected: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<Device>) => void;
+  onDelete: () => void;
+  onPing: () => void;
 }
 
-export const DeviceCard = ({ device, isSelected, onSelect, onUpdate }: DeviceCardProps) => {
+export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, onPing }: DeviceCardProps) => {
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (device.status === 'offline') return;
@@ -41,6 +44,16 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate }: DeviceCar
   const handleVolumeChange = (value: number[]) => {
     if (device.status === 'offline') return;
     onUpdate({ volume: value[0] });
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete();
+  };
+
+  const handlePing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPing();
   };
 
   const formatLastSeen = (date: Date) => {
@@ -103,7 +116,7 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate }: DeviceCar
             </div>
           )}
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <Button
               size="sm"
               variant="outline"
@@ -132,6 +145,30 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate }: DeviceCar
                 {device.volume}%
               </span>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            {device.status === 'offline' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePing}
+                className="bg-orange-600 hover:bg-orange-700 border-orange-600 text-white"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Ping
+              </Button>
+            )}
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 border-red-600 text-white ml-auto"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </Button>
           </div>
         </div>
       </CardContent>

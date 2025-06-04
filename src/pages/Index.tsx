@@ -13,7 +13,9 @@ const Index = () => {
     selectedDevice,
     isScanning,
     scanForDevices,
+    pingSingleDevice,
     addDevice,
+    deleteDevice,
     updateDevice,
     handleSelectDevice,
   } = useDeviceManager();
@@ -40,6 +42,8 @@ const Index = () => {
             view={view}
             onSelectDevice={handleSelectDevice}
             onUpdateDevice={updateDevice}
+            onDeleteDevice={deleteDevice}
+            onPingDevice={pingSingleDevice}
           />
         )}
       </div>

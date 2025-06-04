@@ -19,16 +19,28 @@ interface DeviceGridProps {
   selectedDevice: string | null;
   onSelectDevice: (deviceId: string) => void;
   onUpdateDevice: (deviceId: string, updates: Partial<Device>) => void;
+  onDeleteDevice: (deviceId: string) => void;
+  onPingDevice: (deviceId: string) => void;
   view: 'list' | 'detailed';
 }
 
-export const DeviceGrid = ({ devices, selectedDevice, onSelectDevice, onUpdateDevice, view }: DeviceGridProps) => {
+export const DeviceGrid = ({ 
+  devices, 
+  selectedDevice, 
+  onSelectDevice, 
+  onUpdateDevice, 
+  onDeleteDevice, 
+  onPingDevice, 
+  view 
+}: DeviceGridProps) => {
   if (view === 'list') {
     return (
       <ListView 
         devices={devices}
         selectedDevice={selectedDevice}
         onSelectDevice={onSelectDevice}
+        onDeleteDevice={onDeleteDevice}
+        onPingDevice={onPingDevice}
       />
     );
   }
@@ -45,6 +57,8 @@ export const DeviceGrid = ({ devices, selectedDevice, onSelectDevice, onUpdateDe
             isSelected={selectedDevice === device.id}
             onSelect={() => onSelectDevice(device.id)}
             onUpdate={(updates) => onUpdateDevice(device.id, updates)}
+            onDelete={() => onDeleteDevice(device.id)}
+            onPing={() => onPingDevice(device.id)}
           />
         ))}
       </div>

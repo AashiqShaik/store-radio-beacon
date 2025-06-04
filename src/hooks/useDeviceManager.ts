@@ -28,34 +28,38 @@ export const useDeviceManager = () => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased timeout
 
       // Try multiple methods to check if device is reachable
       const testMethods = [
         { port: 80, protocol: 'http' },
         { port: 8080, protocol: 'http' },
         { port: 3000, protocol: 'http' },
+        { port: 5000, protocol: 'http' },
         { port: 22, protocol: 'ssh' },
       ];
 
       for (const method of testMethods) {
         try {
-          await fetch(`http://${device.ipAddress}:${method.port}/`, {
+          console.log(`Testing ${device.name} on port ${method.port}...`);
+          
+          const response = await fetch(`http://${device.ipAddress}:${method.port}/`, {
             method: 'HEAD',
             signal: controller.signal,
             mode: 'no-cors',
           });
           
           clearTimeout(timeoutId);
-          console.log(`Device ${device.name} is online (port ${method.port})`);
+          console.log(`Device ${device.name} responded on port ${method.port}`);
           return true;
         } catch (error) {
+          console.log(`Port ${method.port} failed for ${device.name}:`, error);
           continue;
         }
       }
       
       clearTimeout(timeoutId);
-      console.log(`Device ${device.name} appears offline`);
+      console.log(`Device ${device.name} appears offline - no ports responded`);
       return false;
     } catch (error) {
       console.log(`Ping failed for ${device.name}:`, error);
@@ -85,7 +89,7 @@ export const useDeviceManager = () => {
         const isOnline = await pingDevice(device);
         return {
           ...device,
-          status: isOnline ? 'online' : 'offline',
+          status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
           lastSeen: isOnline ? new Date() : device.lastSeen,
         };
       });
@@ -112,12 +116,62 @@ export const useDeviceManager = () => {
     }
   };
 
+  // Ping a single device
+  const pingSingleDevice = async (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    toast({
+      title: "Pinging device...",
+      description: `Testing connectivity for ${device.name}`,
+    });
+
+    try {
+      const isOnline = await pingDevice(device);
+      updateDevice(deviceId, {
+        status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
+        lastSeen: isOnline ? new Date() : device.lastSeen,
+      });
+
+      toast({
+        title: isOnline ? "Device is online" : "Device is offline",
+        description: `${device.name} ${isOnline ? 'responded successfully' : 'did not respond'}`,
+        variant: isOnline ? "default" : "destructive",
+      });
+    } catch (error) {
+      console.error('Single ping error:', error);
+      toast({
+        title: "Ping failed",
+        description: `Could not ping ${device.name}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add new device
   const addDevice = (newDevice: Device) => {
     setDevices(prev => [...prev, newDevice]);
     toast({
       title: "Device added",
       description: `${newDevice.name} has been added to your device list`,
+    });
+  };
+
+  // Delete device
+  const deleteDevice = (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    setDevices(prev => prev.filter(d => d.id !== deviceId));
+    
+    // Clear selection if the deleted device was selected
+    if (selectedDevice === deviceId) {
+      setSelectedDevice(null);
+    }
+
+    toast({
+      title: "Device removed",
+      description: `${device.name} has been removed from your device list`,
     });
   };
 
@@ -157,7 +211,7 @@ export const useDeviceManager = () => {
           const isOnline = await pingDevice(device);
           if (device.status !== (isOnline ? 'online' : 'offline')) {
             updateDevice(device.id, {
-              status: isOnline ? 'online' : 'offline',
+              status: (isOnline ? 'online' : 'offline') as 'online' | 'offline',
               lastSeen: isOnline ? new Date() : device.lastSeen,
             });
           }
@@ -173,7 +227,9 @@ export const useDeviceManager = () => {
     selectedDevice,
     isScanning,
     scanForDevices,
+    pingSingleDevice,
     addDevice,
+    deleteDevice,
     updateDevice,
     handleSelectDevice,
   };
