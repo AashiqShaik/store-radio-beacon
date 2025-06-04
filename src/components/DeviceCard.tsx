@@ -83,7 +83,9 @@ export const DeviceCard = ({ device, isSelected, onSelect, onUpdate, onDelete, o
             <Monitor className="h-5 w-5 text-slate-400" />
             <h3 className="font-medium text-white text-sm">{device.name}</h3>
             {isTailscaleIP && (
-              <Shield className="h-4 w-4 text-blue-400" title="Secure Tailscale Connection" />
+              <span className="h-4 w-4 text-blue-400" title="Secure Tailscale Connection">
+                <Shield className="h-4 w-4" />
+              </span>
             )}
           </div>
           
