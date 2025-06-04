@@ -1,37 +1,37 @@
 
 import { Device } from '@/types/device';
+import { supabase } from '@/integrations/supabase/client';
+
+interface HealthCheckResponse {
+  status: 'online' | 'offline';
+  hostname?: string;
+  error?: string;
+}
 
 export const pingDevice = async (device: Device): Promise<boolean> => {
-  console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health...`);
+  console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health via backend...`);
   
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-    const response = await fetch(`http://${device.ipAddress}:5000/health`, {
-      method: 'GET',
-      signal: controller.signal,
-      mode: 'cors',
-      headers: {
-        'Accept': 'application/json',
-      },
+    const { data, error } = await supabase.functions.invoke('check-device-health', {
+      body: { ipAddress: device.ipAddress }
     });
 
-    clearTimeout(timeoutId);
+    if (error) {
+      console.error(`Backend health check error for ${device.name}:`, error);
+      return false;
+    }
 
-    if (response.ok) {
-      console.log(`Health check successful for ${device.name} - Status: ${response.status}`);
+    const healthResult = data as HealthCheckResponse;
+    
+    if (healthResult.status === 'online') {
+      console.log(`Health check successful for ${device.name} - Hostname: ${healthResult.hostname}`);
       return true;
     } else {
-      console.log(`Health check failed for ${device.name} - Status: ${response.status}`);
+      console.log(`Health check failed for ${device.name} - Error: ${healthResult.error}`);
       return false;
     }
   } catch (error) {
-    if (error.name === 'AbortError') {
-      console.log(`Health check timeout for ${device.name}`);
-    } else {
-      console.log(`Health check error for ${device.name}:`, error);
-    }
+    console.error(`Health check error for ${device.name}:`, error);
     return false;
   }
 };

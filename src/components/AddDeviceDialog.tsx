@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,67 +39,28 @@ export const AddDeviceDialog = ({ onAddDevice }: AddDeviceDialogProps) => {
   const [hostAddress, setHostAddress] = useState('');
   const [deviceName, setDeviceName] = useState('');
 
-  // Enhanced connection testing for Raspberry Pi
+  // Updated connection testing using backend health check
   const testConnection = async (address: string): Promise<boolean> => {
-    console.log(`Testing connection to ${address}...`);
+    console.log(`Testing connection to ${address} via backend...`);
     
-    // Try multiple common ports and methods for Raspberry Pi
-    const testMethods = [
-      // Try common web ports that might be open on Pi
-      { port: 80, protocol: 'http' },
-      { port: 8080, protocol: 'http' },
-      { port: 3000, protocol: 'http' },
-      { port: 5000, protocol: 'http' },
-      { port: 22, protocol: 'ssh' }, // SSH port
-    ];
-
-    for (const method of testMethods) {
-      try {
-        console.log(`Trying ${method.protocol} on port ${method.port}...`);
-        
-        // Create a test request with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-        const response = await fetch(`http://${address}:${method.port}/`, {
-          method: 'HEAD', // Use HEAD to minimize data transfer
-          signal: controller.signal,
-          mode: 'no-cors', // Allow requests without CORS
-        });
-
-        clearTimeout(timeoutId);
-        console.log(`Connection successful on port ${method.port}`);
-        return true;
-      } catch (error) {
-        console.log(`Port ${method.port} failed:`, error);
-        continue;
-      }
-    }
-
-    // Try ping-like test using image loading (works for some devices)
     try {
-      console.log('Trying image ping method...');
-      return await new Promise((resolve) => {
-        const img = new Image();
-        const timeout = setTimeout(() => {
-          img.src = '';
-          resolve(false);
-        }, 2000);
-        
-        img.onload = () => {
-          clearTimeout(timeout);
-          resolve(true);
-        };
-        
-        img.onerror = () => {
-          clearTimeout(timeout);
-          resolve(false);
-        };
-        
-        img.src = `http://${address}/favicon.ico?${Date.now()}`;
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.functions.invoke('check-device-health', {
+        body: { ipAddress: address }
       });
+
+      if (error) {
+        console.error('Backend connection test error:', error);
+        return false;
+      }
+
+      const healthResult = data as { status: 'online' | 'offline'; hostname?: string };
+      console.log('Backend connection test result:', healthResult);
+      
+      return healthResult.status === 'online';
     } catch (error) {
-      console.log('Image ping failed:', error);
+      console.error('Connection test failed:', error);
       return false;
     }
   };
