@@ -79,16 +79,6 @@ const pingDeviceBackend = async (device: Device): Promise<boolean> => {
 };
 
 export const pingDevice = async (device: Device): Promise<boolean> => {
-  const isTailscaleIP = device.ipAddress.startsWith('100.');
-  const connectionType = isTailscaleIP ? 'Tailscale (frontend)' : 'local network (backend)';
-  
-  console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health via ${connectionType}...`);
-  
-  if (isTailscaleIP) {
-    // Use frontend-based ping for Tailscale IPs
-    return await pingDeviceFrontend(device);
-  } else {
-    // Use backend-based ping for local network IPs
-    return await pingDeviceBackend(device);
-  }
+  console.log(`Using frontend-only ping strategy for all devices`);
+  return await pingDeviceFrontend(device);
 };
