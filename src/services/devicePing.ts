@@ -8,9 +8,50 @@ interface HealthCheckResponse {
   error?: string;
 }
 
-export const pingDevice = async (device: Device): Promise<boolean> => {
-  const connectionType = device.ipAddress.startsWith('100.') ? 'Tailscale' : 'local network';
-  console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health via ${connectionType} backend...`);
+// Frontend-based health check for Tailscale IPs
+const pingDeviceFrontend = async (device: Device): Promise<boolean> => {
+  console.log(`Frontend ping: Testing device ${device.name} at ${device.ipAddress}:5000/health via Tailscale...`);
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log(`Frontend ping timeout (10s) for ${device.name}`);
+      controller.abort();
+    }, 10000); // 10 second timeout for frontend requests
+
+    const healthUrl = `http://${device.ipAddress}:5000/health`;
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Lovable-Device-Manager-Frontend/1.0',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const healthData = await response.json();
+      console.log(`Frontend ping successful for ${device.name} - Hostname: ${healthData.hostname || 'Unknown'}`);
+      return true;
+    } else {
+      console.log(`Frontend ping failed for ${device.name} - HTTP Status: ${response.status}`);
+      return false;
+    }
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log(`Frontend ping timeout for ${device.name}`);
+    } else {
+      console.log(`Frontend ping error for ${device.name}:`, error.message);
+    }
+    return false;
+  }
+};
+
+// Backend-based health check for local network IPs
+const pingDeviceBackend = async (device: Device): Promise<boolean> => {
+  console.log(`Backend ping: Testing device ${device.name} at ${device.ipAddress}:5000/health via local network...`);
   
   try {
     const { data, error } = await supabase.functions.invoke('check-device-health', {
@@ -18,21 +59,36 @@ export const pingDevice = async (device: Device): Promise<boolean> => {
     });
 
     if (error) {
-      console.error(`Backend health check error for ${device.name} (${connectionType}):`, error);
+      console.error(`Backend health check error for ${device.name}:`, error);
       return false;
     }
 
     const healthResult = data as HealthCheckResponse;
     
     if (healthResult.status === 'online') {
-      console.log(`Health check successful for ${device.name} via ${connectionType} - Hostname: ${healthResult.hostname}`);
+      console.log(`Backend ping successful for ${device.name} - Hostname: ${healthResult.hostname}`);
       return true;
     } else {
-      console.log(`Health check failed for ${device.name} via ${connectionType} - Error: ${healthResult.error}`);
+      console.log(`Backend ping failed for ${device.name} - Error: ${healthResult.error}`);
       return false;
     }
   } catch (error) {
-    console.error(`Health check error for ${device.name} via ${connectionType}:`, error);
+    console.error(`Backend health check error for ${device.name}:`, error);
     return false;
+  }
+};
+
+export const pingDevice = async (device: Device): Promise<boolean> => {
+  const isTailscaleIP = device.ipAddress.startsWith('100.');
+  const connectionType = isTailscaleIP ? 'Tailscale (frontend)' : 'local network (backend)';
+  
+  console.log(`Pinging device ${device.name} at ${device.ipAddress}:5000/health via ${connectionType}...`);
+  
+  if (isTailscaleIP) {
+    // Use frontend-based ping for Tailscale IPs
+    return await pingDeviceFrontend(device);
+  } else {
+    // Use backend-based ping for local network IPs
+    return await pingDeviceBackend(device);
   }
 };
