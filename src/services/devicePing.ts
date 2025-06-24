@@ -10,16 +10,22 @@ interface HealthCheckResponse {
 
 // Frontend-based health check for Tailscale IPs
 const pingDeviceFrontend = async (device: Device): Promise<boolean> => {
-  console.log(`Frontend ping: Testing device ${device.name} at ${device.ipAddress}:5000/health via Tailscale...`);
+  const isTailscaleIP = device.ipAddress.startsWith('100.');
+  const connectionType = isTailscaleIP ? 'Tailscale' : 'local network';
+  const timeoutMs = isTailscaleIP ? 15000 : 10000; // 15s for Tailscale, 10s for local
+  
+  console.log(`Frontend ping: Testing device ${device.name} at ${device.ipAddress}:5000/health via ${connectionType} (${timeoutMs/1000}s timeout)...`);
   
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.log(`Frontend ping timeout (10s) for ${device.name}`);
+      console.log(`Frontend ping timeout (${timeoutMs/1000}s) for ${device.name}`);
       controller.abort();
-    }, 10000); // 10 second timeout for frontend requests
+    }, timeoutMs);
 
     const healthUrl = `http://${device.ipAddress}:5000/health`;
+    console.log(`Making frontend request to: ${healthUrl}`);
+    
     const response = await fetch(healthUrl, {
       method: 'GET',
       signal: controller.signal,
@@ -27,23 +33,29 @@ const pingDeviceFrontend = async (device: Device): Promise<boolean> => {
         'Accept': 'application/json',
         'User-Agent': 'Lovable-Device-Manager-Frontend/1.0',
       },
+      // Add mode for CORS handling
+      mode: 'cors',
     });
 
     clearTimeout(timeoutId);
 
+    console.log(`Frontend response status for ${device.name}: ${response.status}`);
+
     if (response.ok) {
       const healthData = await response.json();
-      console.log(`Frontend ping successful for ${device.name} - Hostname: ${healthData.hostname || 'Unknown'}`);
+      console.log(`Frontend ping successful for ${device.name} - Response:`, healthData);
       return true;
     } else {
-      console.log(`Frontend ping failed for ${device.name} - HTTP Status: ${response.status}`);
+      console.log(`Frontend ping failed for ${device.name} - HTTP Status: ${response.status}, StatusText: ${response.statusText}`);
       return false;
     }
   } catch (error) {
     if (error.name === 'AbortError') {
-      console.log(`Frontend ping timeout for ${device.name}`);
+      console.log(`Frontend ping timeout (${timeoutMs/1000}s) for ${device.name}`);
+    } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      console.log(`Frontend ping network error for ${device.name}: Likely CORS or network connectivity issue - ${error.message}`);
     } else {
-      console.log(`Frontend ping error for ${device.name}:`, error.message);
+      console.log(`Frontend ping error for ${device.name}:`, error.name, error.message);
     }
     return false;
   }
